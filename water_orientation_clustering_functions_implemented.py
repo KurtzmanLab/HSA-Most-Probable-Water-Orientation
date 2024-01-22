@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 
 # ===============================================================================
@@ -45,14 +44,14 @@ def perform_rotation_on_atom(q_0, q_1, q_2, q_3, atom_old_x_coords, atom_old_y_c
     return [atom_new_x_coords, atom_new_y_coords, atom_new_z_coords]
 
 ####################################################################################
-# try:
-#     inputfile = sys.argv[1]
-#
-# except IndexError:
-#     print("\nUSAGE: {} inputfile\n".format(sys.argv[0]))
-#     exit(2)
 
-inputfile = "cluster.000001.pdb"
+
+try:
+    inputfile = sys.argv[1]
+
+except IndexError:
+    print("\nUSAGE: {} inputfile\n".format(sys.argv[0]))
+    exit(2)
 
 with open(inputfile, "r") as file:  # opens the file and reads each line as an item in a list and closes it.
     np.seterr(divide='ignore', invalid='ignore')  # https://stackoverflow.com/questions/14861891/runtimewarning-invalid-value-encountered-in-divide
