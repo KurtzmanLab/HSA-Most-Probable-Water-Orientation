@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 
 # ===============================================================================
@@ -19,21 +18,37 @@
 #      REVISION:  ---
 # ====================================================================
 
-import math
 import numpy as np
 import sys
 import copy
-import datetime
-import os
 
-# try:
-#     inputfile = sys.argv[1]
-#
-# except IndexError:
-#     print("\nUSAGE: {} inputfile\n".format(sys.argv[0]))
-#     exit(2)
 
-inputfile = "cluster.000001.pdb"
+####################################################################################
+def perform_rotation_on_atom(q_0, q_1, q_2, q_3, atom_old_x_coords, atom_old_y_coords, atom_old_z_coords):
+
+    atom_new_x_coords = np.multiply(np.subtract(np.add(np.square(q_0), np.square(q_1)), np.add(np.square(q_2), np.square(q_3))), atom_old_x_coords)
+    atom_new_x_coords += np.multiply(2, np.multiply(np.add(np.multiply(q_1, q_2), np.multiply(q_0, q_3)), atom_old_y_coords))
+    atom_new_x_coords += np.multiply(2, np.multiply(np.subtract(np.multiply(q_1, q_3), np.multiply(q_0, q_2)), atom_old_z_coords))
+
+    atom_new_y_coords = np.multiply(np.multiply(2, np.subtract(np.multiply(q_1, q_2), np.multiply(q_0, q_3))), atom_old_x_coords)
+    atom_new_y_coords += np.multiply(np.add(np.subtract(np.multiply(q_0, q_0), np.multiply(q_1, q_1)), np.subtract(np.multiply(q_2, q_2), np.multiply(q_3, q_3))), atom_old_y_coords)
+    atom_new_y_coords += np.multiply(2, np.multiply(np.add(np.multiply(q_2, q_3), np.multiply(q_0, q_1)), atom_old_z_coords))
+
+    atom_new_z_coords = np.multiply(np.multiply(2, np.add(np.multiply(q_1, q_3), np.multiply(q_0, q_2))), atom_old_x_coords)
+    atom_new_z_coords += np.multiply(2, np.multiply(np.subtract(np.multiply(q_2, q_3), np.multiply(q_0, q_1)), atom_old_y_coords))
+    atom_new_z_coords += np.multiply(np.add(np.subtract(np.subtract(np.multiply(q_0, q_0), np.multiply(q_1, q_1)), np.multiply(q_2, q_2)), np.multiply(q_3, q_3)), atom_old_z_coords)
+
+    return [atom_new_x_coords, atom_new_y_coords, atom_new_z_coords]
+
+####################################################################################
+
+
+try:
+    inputfile = sys.argv[1]
+
+except IndexError:
+    print("\nUSAGE: {} inputfile\n".format(sys.argv[0]))
+    exit(2)
 
 with open(inputfile, "r") as file:  # opens the file and reads each line as an item in a list and closes it.
     np.seterr(divide='ignore', invalid='ignore')  # https://stackoverflow.com/questions/14861891/runtimewarning-invalid-value-encountered-in-divide
@@ -54,6 +69,7 @@ for i in oxygen:
     oxygen_x.append(float(i[32:38]))
     oxygen_y.append(float(i[40:46]))
     oxygen_z.append(float(i[48:54]))
+# Turn the list of coordinates into a numpy array
 np_o_x = np.array(oxygen_x)
 np_o_y = np.array(oxygen_y)
 np_o_z = np.array(oxygen_z)
@@ -69,6 +85,7 @@ for i in h1:
     h1_x.append(float(i[32:38]))
     h1_y.append(float(i[40:46]))
     h1_z.append(float(i[48:54]))
+# Turn the list of coordinates into a numpy array
 np_h1_x = np.array(h1_x)
 np_h1_y = np.array(h1_y)
 np_h1_z = np.array(h1_z)
@@ -76,7 +93,7 @@ np_h1_z = np.array(h1_z)
 ####################################################################################
 
 ####################################################################################
-# Pulling the H1 atoms coordinates
+# Pulling the H2 atoms coordinates
 h2_x = []
 h2_y = []
 h2_z = []
@@ -84,6 +101,7 @@ for i in h2:
     h2_x.append(float(i[32:38]))
     h2_y.append(float(i[40:46]))
     h2_z.append(float(i[48:54]))
+# Turn the list of coordinates into a numpy array
 np_h2_x = np.array(h2_x)
 np_h2_y = np.array(h2_y)
 np_h2_z = np.array(h2_z)
@@ -94,30 +112,21 @@ np_h2_z = np.array(h2_z)
 # Translating all the H2O molecules such that all the O atoms are at the (0,0,0) position
 # without altering the 3D orientation of the molecule
 new_oxygen_x = np.subtract(np_o_x, np_o_x)
-#  print("new_oxygen_x:", new_oxygen_x)
 new_oxygen_y = np.subtract(np_o_y, np_o_y)
-#  print("new_oxygen_y:", new_oxygen_y)
 new_oxygen_z = np.subtract(np_o_z, np_o_z)
-#  print("new_oxygen_z:", new_oxygen_z)
 
 new_h1_x = np.subtract(np_h1_x, np_o_x)
-#  print("new_h1_x:", new_h1_x)
 new_h1_y = np.subtract(np_h1_y, np_o_y)
-#  print("new_h1_y:", new_h1_y)
 new_h1_z = np.subtract(np_h1_z, np_o_z)
-#  print("new_h1_z:", new_h1_z)
 
 new_h2_x = np.subtract(np_h2_x, np_o_x)
-#  print("new_h2_x:", new_h2_x)
 new_h2_y = np.subtract(np_h2_y, np_o_y)
-#  print("new_h2_y:", new_h2_y)
 new_h2_z = np.subtract(np_h2_z, np_o_z)
-#  print("new_h2_z:", new_h2_z)
 
 ###############################################################################
 
 ###############################################################################
-#  Getting the length of h1 vector for each water molecule.
+# Getting the length of h1 vector for each water molecule.
 np.set_printoptions(suppress=True,
                     formatter={'float_kind': '{:0.8f}'.format})
 h1_x_squares = np.square(new_h1_x)
@@ -126,7 +135,6 @@ h1_z_squares = np.square(new_h1_z)
 h1_xy_squares_added = np.add(h1_x_squares, h1_y_squares)
 h1_all_squares_added = np.add(h1_xy_squares_added, h1_z_squares)
 h1_length = np.sqrt(h1_all_squares_added)
-#  print("h1_length:", h1_length)
 
 #  Getting the length of h2 vector for each water molecule.
 np.set_printoptions(suppress=True,
@@ -137,14 +145,12 @@ h2_z_squares = np.square(new_h2_z)
 h2_xy_squares_added = np.add(h2_x_squares, h2_y_squares)
 h2_all_squares_added = np.add(h2_xy_squares_added, h2_z_squares)
 h2_length = np.sqrt(h2_all_squares_added)
-#  print("h2_length:", h2_length)
 
 ###############################################################################
 
 ###############################################################################
-#  Normalizing each axis of each hydrogen atom
-#  We do this by dividing each atom axes with its own atom magnitude from oxygen atom
-
+# Normalizing each axis of each hydrogen atom
+# We do this by dividing each atom axes with its own atom magnitude from oxygen atom
 norm_h1_x = np.divide(new_h1_x, h1_length)
 norm_h1_y = np.divide(new_h1_y, h1_length)
 norm_h1_z = np.divide(new_h1_z, h1_length)
@@ -156,14 +162,24 @@ norm_h2_z = np.divide(new_h2_z, h2_length)
 ###############################################################################
 
 ###############################################################################
-# Defining the three axes coordinates
+# Using this temporary which we will alter for all operations of rotations
+temp_norm_h1_x = copy.deepcopy(norm_h1_x)
+temp_norm_h1_y = copy.deepcopy(norm_h1_y)
+temp_norm_h1_z = copy.deepcopy(norm_h1_z)
+temp_norm_h2_x = copy.deepcopy(norm_h2_x)
+temp_norm_h2_y = copy.deepcopy(norm_h2_y)
+temp_norm_h2_z = copy.deepcopy(norm_h2_z)
+
+###############################################################################
+
+###############################################################################
+# Defining the three axes of reference
 x_ref = [1, 0, 0]
 y_ref = [0, 1, 0]
 z_ref = [0, 0, 1]
 
 ###############################################################################
 # Rotating each water molecule such that: H1 is laid on the (1,0,0) AND H2 is laid planar to the xy plane.
-
 H1final_q_0_all = []
 H1final_q_1_all = []
 H1final_q_2_all = []
@@ -172,13 +188,6 @@ H2final_q_0_all = []
 H2final_q_1_all = []
 H2final_q_2_all = []
 H2final_q_3_all = []
-
-temp_norm_h1_x = copy.deepcopy(norm_h1_x)
-temp_norm_h1_y = copy.deepcopy(norm_h1_y)
-temp_norm_h1_z = copy.deepcopy(norm_h1_z)
-temp_norm_h2_x = copy.deepcopy(norm_h2_x)
-temp_norm_h2_y = copy.deepcopy(norm_h2_y)
-temp_norm_h2_z = copy.deepcopy(norm_h2_z)
 
 H1updated_theta_in_degrees_all = []
 H2updated_theta_in_degrees_all = []
@@ -190,10 +199,18 @@ for ndx, i in enumerate(norm_h1_x):
     # This whole block is calculating first and second quaternions and their product quaternion to
     # ROTATE H1 on top of (1,0,0) and ROTATE H2 on the xy plane
 
-    # The first rotational axis (ar)
-    H1ar_x = np.subtract(np.multiply(temp_norm_h1_y[ndx], x_ref[2]), np.multiply(temp_norm_h1_z[ndx], x_ref[1]))
-    H1ar_y = np.subtract(np.multiply(temp_norm_h1_z[ndx], x_ref[0]), np.multiply(temp_norm_h1_x[ndx], x_ref[2]))
-    H1ar_z = np.subtract(np.multiply(temp_norm_h1_x[ndx], x_ref[1]), np.multiply(temp_norm_h1_y[ndx], x_ref[0]))
+    # Cross product of the two vectors will result in the axis of rotation - The first rotational axis (ar)
+    # if O-H1 vector is parallel to x_ref vector, cross product is 0 and therefore we wont have an axis of rotation.
+    # In the case where the O-H1 vector is lying on the (1,0,0) or the (-1,0,0) coordinates, we need to use y-ref (0,1,0) to just define cross product (the axis of rotation).
+    # otherwise, we are good to continue using x_ref (1,0,0) for the cross product with the O-H1 vector
+    if abs(temp_norm_h1_x[ndx]) == 1 and temp_norm_h1_y[ndx] == 0 and temp_norm_h1_z[ndx] == 0:
+        H1ar_x = np.subtract(np.multiply(temp_norm_h1_y[ndx], y_ref[2]), np.multiply(temp_norm_h1_z[ndx], y_ref[1]))
+        H1ar_y = np.subtract(np.multiply(temp_norm_h1_z[ndx], y_ref[0]), np.multiply(temp_norm_h1_x[ndx], y_ref[2]))
+        H1ar_z = np.subtract(np.multiply(temp_norm_h1_x[ndx], y_ref[1]), np.multiply(temp_norm_h1_y[ndx], y_ref[0]))
+    else:
+        H1ar_x = np.subtract(np.multiply(temp_norm_h1_y[ndx], x_ref[2]), np.multiply(temp_norm_h1_z[ndx], x_ref[1]))
+        H1ar_y = np.subtract(np.multiply(temp_norm_h1_z[ndx], x_ref[0]), np.multiply(temp_norm_h1_x[ndx], x_ref[2]))
+        H1ar_z = np.subtract(np.multiply(temp_norm_h1_x[ndx], x_ref[1]), np.multiply(temp_norm_h1_y[ndx], x_ref[0]))
 
     # Normalizing the first rotational axis (ar).
     H1ar_x_squares = np.square(H1ar_x)
@@ -244,42 +261,22 @@ for ndx, i in enumerate(norm_h1_x):
     e_3 = copy.deepcopy(H1q1_3)
 
     # Performing that first quaternion on H1 and pull the new coordinates of H1
-    htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), temp_norm_h1_x[ndx])
-    htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), temp_norm_h1_y[ndx]))
-    htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), temp_norm_h1_z[ndx]))
-
-    htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), temp_norm_h1_x[ndx])
-    htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), temp_norm_h1_y[ndx])
-    htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h1_z[ndx]))
-
-    htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), temp_norm_h1_x[ndx])
-    htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h1_y[ndx]))
-    htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), temp_norm_h1_z[ndx])
+    new_h1_coords = perform_rotation_on_atom(e_0, e_1, e_2, e_3, temp_norm_h1_x[ndx], temp_norm_h1_y[ndx], temp_norm_h1_z[ndx])
 
     # H1 coordinates after the rotation operation - all the H1 coordinates should now be 1,0,0
-    h1_moved_x = copy.deepcopy(htemp_0)
-    h1_moved_y = copy.deepcopy(htemp_1)
-    h1_moved_z = copy.deepcopy(htemp_2)
+    h1_moved_x = copy.deepcopy(new_h1_coords[0])
+    h1_moved_y = copy.deepcopy(new_h1_coords[1])
+    h1_moved_z = copy.deepcopy(new_h1_coords[2])
 
     # Performing that first quaternion on H2 and pull the new coordinates of H2
-    htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), temp_norm_h2_x[ndx])
-    htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), temp_norm_h2_y[ndx]))
-    htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), temp_norm_h2_z[ndx]))
-
-    htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), temp_norm_h2_x[ndx])
-    htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), temp_norm_h2_y[ndx])
-    htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h2_z[ndx]))
-
-    htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), temp_norm_h2_x[ndx])
-    htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h2_y[ndx]))
-    htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), temp_norm_h2_z[ndx])
+    new_h2_coords = perform_rotation_on_atom(e_0, e_1, e_2, e_3, temp_norm_h2_x[ndx], temp_norm_h2_y[ndx], temp_norm_h2_z[ndx])
 
     # H2 coordinates after the rotation operation - the H2 arent yet on the xy plane - the next pblock of code will take care of performing that
-    h2_after_h1_moved_x = copy.deepcopy(htemp_0)
-    h2_after_h1_moved_y = copy.deepcopy(htemp_1)
-    h2_after_h1_moved_z = copy.deepcopy(htemp_2)
+    h2_after_h1_moved_x = copy.deepcopy(new_h2_coords[0])
+    h2_after_h1_moved_y = copy.deepcopy(new_h2_coords[1])
+    h2_after_h1_moved_z = copy.deepcopy(new_h2_coords[2])
 
-    # The second rotational axis
+    # Cross product of the two vectors will result in the axis of rotation - The second rotational axis
     H1z_mol_vect_x = np.subtract(np.multiply(h1_moved_y, h2_after_h1_moved_z), np.multiply(h1_moved_z, h2_after_h1_moved_y))
     H1z_mol_vect_y = np.subtract(np.multiply(h1_moved_z, h2_after_h1_moved_x), np.multiply(h1_moved_x, h2_after_h1_moved_z))
     H1z_mol_vect_z = np.subtract(np.multiply(h1_moved_x, h2_after_h1_moved_y), np.multiply(h1_moved_y, h2_after_h1_moved_x))
@@ -364,9 +361,18 @@ for ndx, i in enumerate(norm_h1_x):
     # This whole block is calculating first and second quaternions and their product quaternion to
     # ROTATE H2 on top of (1,0,0) and ROTATE H1 on the xy plane
 
-    H2ar_x = np.subtract(np.multiply(temp_norm_h2_y[ndx], x_ref[2]), np.multiply(temp_norm_h2_z[ndx], x_ref[1]))
-    H2ar_y = np.subtract(np.multiply(temp_norm_h2_z[ndx], x_ref[0]), np.multiply(temp_norm_h2_x[ndx], x_ref[2]))
-    H2ar_z = np.subtract(np.multiply(temp_norm_h2_x[ndx], x_ref[1]), np.multiply(temp_norm_h2_y[ndx], x_ref[0]))
+    # Cross product of the two vectors will result in the axis of rotation - The first rotational axis (ar)
+    # if O-H2 vector is parallel to x_ref vector, cross product is 0 and therefore we wont have an axis of rotation.
+    # In the case where the O-H2 vector is lying on the (1,0,0) or the (-1,0,0) coordinates, we need to use y-ref (0,1,0) to just define cross product (the axis of rotation).
+    # otherwise, we are good to continue using x_ref (1,0,0) for the cross product with the O-H1 vector
+    if abs(temp_norm_h2_x[ndx]) == 1 and temp_norm_h2_y[ndx] == 0 and temp_norm_h2_z[ndx] == 0:
+        H2ar_x = np.subtract(np.multiply(temp_norm_h2_y[ndx], y_ref[2]), np.multiply(temp_norm_h2_z[ndx], y_ref[1]))
+        H2ar_y = np.subtract(np.multiply(temp_norm_h2_z[ndx], y_ref[0]), np.multiply(temp_norm_h2_x[ndx], y_ref[2]))
+        H2ar_z = np.subtract(np.multiply(temp_norm_h2_x[ndx], y_ref[1]), np.multiply(temp_norm_h2_y[ndx], y_ref[0]))
+    else:
+        H2ar_x = np.subtract(np.multiply(temp_norm_h2_y[ndx], x_ref[2]), np.multiply(temp_norm_h2_z[ndx], x_ref[1]))
+        H2ar_y = np.subtract(np.multiply(temp_norm_h2_z[ndx], x_ref[0]), np.multiply(temp_norm_h2_x[ndx], x_ref[2]))
+        H2ar_z = np.subtract(np.multiply(temp_norm_h2_x[ndx], x_ref[1]), np.multiply(temp_norm_h2_y[ndx], x_ref[0]))
 
     #  Normalizing the first rotational axis (ar).
     H2ar_x_squares = np.square(H2ar_x)
@@ -419,42 +425,22 @@ for ndx, i in enumerate(norm_h1_x):
     e_3 = copy.deepcopy(H2q1_3)
 
     # Performing that first quaternion on H2 and pull the new coordinates of H2
-    htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), temp_norm_h2_x[ndx])
-    htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), temp_norm_h2_y[ndx]))
-    htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), temp_norm_h2_z[ndx]))
-
-    htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), temp_norm_h2_x[ndx])
-    htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), temp_norm_h2_y[ndx])
-    htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h2_z[ndx]))
-
-    htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), temp_norm_h2_x[ndx])
-    htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h2_y[ndx]))
-    htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), temp_norm_h2_z[ndx])
+    new_h2_coords = perform_rotation_on_atom(e_0, e_1, e_2, e_3, temp_norm_h2_x[ndx], temp_norm_h2_y[ndx], temp_norm_h2_z[ndx])
 
     # H2 coordinates after the rotation operation - all the H2 coordinates should now be 1,0,0
-    h2_moved_x = copy.deepcopy(htemp_0)
-    h2_moved_y = copy.deepcopy(htemp_1)
-    h2_moved_z = copy.deepcopy(htemp_2)
+    h2_moved_x = copy.deepcopy(new_h2_coords[0])
+    h2_moved_y = copy.deepcopy(new_h2_coords[1])
+    h2_moved_z = copy.deepcopy(new_h2_coords[2])
 
     # Performing that first quaternion on H1 and pull the new coordinates of H1
-    htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), temp_norm_h1_x[ndx])
-    htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), temp_norm_h1_y[ndx]))
-    htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), temp_norm_h1_z[ndx]))
-
-    htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), temp_norm_h1_x[ndx])
-    htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), temp_norm_h1_y[ndx])
-    htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h1_z[ndx]))
-
-    htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), temp_norm_h1_x[ndx])
-    htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), temp_norm_h1_y[ndx]))
-    htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), temp_norm_h1_z[ndx])
+    new_h1_coords = perform_rotation_on_atom(e_0, e_1, e_2, e_3, temp_norm_h1_x[ndx], temp_norm_h1_y[ndx], temp_norm_h1_z[ndx])
 
     # H1 coordinates after the rotation operation - the H1 aren't yet on the xy plane - the next block of code will take care of performing that
-    h1_after_h2_moved_x = copy.deepcopy(htemp_0)
-    h1_after_h2_moved_y = copy.deepcopy(htemp_1)
-    h1_after_h2_moved_z = copy.deepcopy(htemp_2)
+    h1_after_h2_moved_x = copy.deepcopy(new_h1_coords[0])
+    h1_after_h2_moved_y = copy.deepcopy(new_h1_coords[1])
+    h1_after_h2_moved_z = copy.deepcopy(new_h1_coords[2])
 
-    # The second rotational axis
+    # Cross product of the two vectors will result in the axis of rotation - The second rotational axis
     H2z_mol_vect_x = np.subtract(np.multiply(h2_moved_y, h1_after_h2_moved_z), np.multiply(h2_moved_z, h1_after_h2_moved_y))
     H2z_mol_vect_y = np.subtract(np.multiply(h2_moved_z, h1_after_h2_moved_x), np.multiply(h2_moved_x, h1_after_h2_moved_z))
     H2z_mol_vect_z = np.subtract(np.multiply(h2_moved_x, h1_after_h2_moved_y), np.multiply(h2_moved_y, h1_after_h2_moved_x))
@@ -535,116 +521,6 @@ for ndx, i in enumerate(norm_h1_x):
     # This whole block was calculating first and second quaternions and their product quaternion that will rotate H2 on top of 1,0,0 and H1 on the xy plane
     #######################################################################################################################################################
 
-#######################################################################################################################################################
-#  Testing the two product quaternions
-#######################################################################################################################################################
-
-# ##########################################################################################################
-# # Testing the FIRST product quaternion which will rotate H1 on the 1,0,0 and the H2 on the xy plane
-# e_0 = copy.deepcopy(H1final_q_0_all)
-# e_1 = copy.deepcopy(H1final_q_1_all)
-# e_2 = copy.deepcopy(H1final_q_2_all)
-# e_3 = copy.deepcopy(H1final_q_3_all)
-#
-# htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), norm_h1_x)
-# htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), norm_h1_y))
-# htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), norm_h1_z))
-#
-# htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), norm_h1_x)
-# htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), norm_h1_y)
-# htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h1_z))
-#
-# htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), norm_h1_x)
-# htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h1_y))
-# htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), norm_h1_z)
-#
-# FINAL_h1_moved_x = copy.deepcopy(htemp_0)
-# FINAL_h1_moved_y = copy.deepcopy(htemp_1)
-# FINAL_h1_moved_z = copy.deepcopy(htemp_2)
-#
-# htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), norm_h2_x)
-# htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), norm_h2_y))
-# htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), norm_h2_z))
-#
-# htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), norm_h2_x)
-# htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), norm_h2_y)
-# htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h2_z))
-#
-# htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), norm_h2_x)
-# htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h2_y))
-# htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), norm_h2_z)
-#
-# FINAL_h2_after_h1_moved_x = copy.deepcopy(htemp_0)
-# FINAL_h2_after_h1_moved_y = copy.deepcopy(htemp_1)
-# FINAL_h2_after_h1_moved_z = copy.deepcopy(htemp_2)
-#
-# # print(max(FINAL_h1_moved_x))
-# # print(min(FINAL_h1_moved_x))
-# # print(max(FINAL_h1_moved_y))
-# # print(min(FINAL_h1_moved_y))
-# # print(max(FINAL_h1_moved_z))
-# # print(min(FINAL_h1_moved_z))
-# # print(max(FINAL_h2_after_h1_moved_x))
-# # print(min(FINAL_h2_after_h1_moved_x))
-# # print(max(FINAL_h2_after_h1_moved_y))
-# # print(min(FINAL_h2_after_h1_moved_y))
-# # print(max(FINAL_h2_after_h1_moved_z))
-# # print(min(FINAL_h2_after_h1_moved_z))
-# ##########################################################################################################
-#
-# ##########################################################################################################
-# # Testing the SECOND product quaternion which will rotate H2 on the 1,0,0 and the H1 on the xy plane
-# e_0 = copy.deepcopy(H2final_q_0_all)
-# e_1 = copy.deepcopy(H2final_q_1_all)
-# e_2 = copy.deepcopy(H2final_q_2_all)
-# e_3 = copy.deepcopy(H2final_q_3_all)
-#
-# htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), norm_h2_x)
-# htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), norm_h2_y))
-# htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), norm_h2_z))
-#
-# htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), norm_h2_x)
-# htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), norm_h2_y)
-# htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h2_z))
-#
-# htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), norm_h2_x)
-# htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h2_y))
-# htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), norm_h2_z)
-#
-# FINAL_h2_moved_x = copy.deepcopy(htemp_0)
-# FINAL_h2_moved_y = copy.deepcopy(htemp_1)
-# FINAL_h2_moved_z = copy.deepcopy(htemp_2)
-#
-# htemp_0 = np.multiply(np.subtract(np.add(np.square(e_0), np.square(e_1)), np.add(np.square(e_2), np.square(e_3))), norm_h1_x)
-# htemp_0 += np.multiply(2, np.multiply(np.add(np.multiply(e_1, e_2), np.multiply(e_0, e_3)), norm_h1_y))
-# htemp_0 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_1, e_3), np.multiply(e_0, e_2)), norm_h1_z))
-#
-# htemp_1 = np.multiply(np.multiply(2, np.subtract(np.multiply(e_1, e_2), np.multiply(e_0, e_3))), norm_h1_x)
-# htemp_1 += np.multiply(np.add(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.subtract(np.multiply(e_2, e_2), np.multiply(e_3, e_3))), norm_h1_y)
-# htemp_1 += np.multiply(2, np.multiply(np.add(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h1_z))
-#
-# htemp_2 = np.multiply(np.multiply(2, np.add(np.multiply(e_1, e_3), np.multiply(e_0, e_2))), norm_h1_x)
-# htemp_2 += np.multiply(2, np.multiply(np.subtract(np.multiply(e_2, e_3), np.multiply(e_0, e_1)), norm_h1_y))
-# htemp_2 += np.multiply(np.add(np.subtract(np.subtract(np.multiply(e_0, e_0), np.multiply(e_1, e_1)), np.multiply(e_2, e_2)), np.multiply(e_3, e_3)), norm_h1_z)
-#
-# FINAL_h1_after_h2_moved_x = copy.deepcopy(htemp_0)
-# FINAL_h1_after_h2_moved_y = copy.deepcopy(htemp_1)
-# FINAL_h1_after_h2_moved_z = copy.deepcopy(htemp_2)
-#
-# # print(max(FINAL_h2_moved_x))
-# # print(min(FINAL_h2_moved_x))
-# # print(max(FINAL_h2_moved_y))
-# # print(min(FINAL_h2_moved_y))
-# # print(max(FINAL_h2_moved_z))
-# # print(min(FINAL_h2_moved_z))
-# # print(max(FINAL_h1_after_h2_moved_x))
-# # print(min(FINAL_h1_after_h2_moved_x))
-# # print(max(FINAL_h1_after_h2_moved_y))
-# # print(min(FINAL_h1_after_h2_moved_y))
-# # print(max(FINAL_h1_after_h2_moved_z))
-# # print(min(FINAL_h1_after_h2_moved_z))
-# #######################################################################################################################################################
-
 ##########################################################################################################
 # Initially the list to create a list of list with size N
 N = len(H1final_q_0_all)
@@ -697,8 +573,6 @@ for i in range(0, N):
             if Euclidean_distance_by_q < cutoff:
                 Neighbors[i].append(j)
                 Neighbors[j].append(i)
-
-    # print("Current progress:", np.round(i / len(H1final_q_0_all) * 100, 2), "%")  # to show in console the progress
 
 
 sorted_tuples = [None] * N
@@ -779,6 +653,3 @@ for ndx, i in enumerate(sorted_cluster):
 outfile.close()
 
 ###############################################################################
-
-
-
